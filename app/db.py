@@ -140,18 +140,64 @@ def update_ticket(
         conn.commit()
 
 
-def list_tickets(limit: int = 50) -> list[dict]:
-    """Return the most recently touched tickets, newest first."""
+def get_ticket(ticket_id: int) -> dict | None:
+    """Fetch a single ticket by id, or None if it does not exist."""
     sql = """
         SELECT *
         FROM tickets
-        ORDER BY updated_at DESC
-        LIMIT %s
+        WHERE id = %s
     """
     with get_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute(sql, (limit,))
+            cur.execute(sql, (ticket_id,))
+            return cur.fetchone()
+
+
+def list_tickets(status: str | None = None, limit: int = 50) -> list[dict]:
+    """Return the most recently touched tickets, newest first.
+
+    When *status* is given, only tickets with that status are returned.
+    """
+    if status is None:
+        sql = """
+            SELECT *
+            FROM tickets
+            ORDER BY updated_at DESC
+            LIMIT %s
+        """
+        params: tuple = (limit,)
+    else:
+        sql = """
+            SELECT *
+            FROM tickets
+            WHERE status = %s
+            ORDER BY updated_at DESC
+            LIMIT %s
+        """
+        params = (status, limit)
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql, params)
             return cur.fetchall()
+
+
+def ticket_counts() -> dict[str, int]:
+    """Return ticket counts for every dashboard status (zeros included)."""
+    sql = """
+        SELECT status, count(*) AS count
+        FROM tickets
+        GROUP BY status
+    """
+    counts = {key: 0 for key in ("all", "escalated", "open", "answered", "resolved")}
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql)
+            for row in cur.fetchall():
+                counts[row["status"]] = row["count"]
+    counts["all"] = sum(
+        counts[key] for key in ("escalated", "open", "answered", "resolved")
+    )
+    return counts
 
 
 def get_ticket_with_messages(ticket_id: int) -> dict | None:
@@ -184,6 +230,20 @@ def get_ticket_with_messages(ticket_id: int) -> dict | None:
 # ---------------------------------------------------------------------------
 # Messages
 # ---------------------------------------------------------------------------
+def get_ticket_messages(ticket_id: int) -> list[dict]:
+    """Return every message on a ticket, oldest first."""
+    sql = """
+        SELECT *
+        FROM messages
+        WHERE ticket_id = %s
+        ORDER BY created_at ASC
+    """
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql, (ticket_id,))
+            return cur.fetchall()
+
+
 def save_message(
     ticket_id: int,
     gmail_message_id: str,
@@ -249,6 +309,92 @@ def list_all_kb() -> list[dict]:
             return cur.fetchall()
 
 
+def get_kb_doc(kb_id: int) -> dict | None:
+    """Fetch a single KB row by id, or None if it does not exist."""
+    sql = """
+        SELECT *
+        FROM knowledge_base
+        WHERE id = %s
+    """
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql, (kb_id,))
+            return cur.fetchone()
+
+
+def create_kb_doc(section: str, title: str, content: str) -> int:
+    """Insert a KB doc; on (section, title) conflict return the existing id."""
+    sql = """
+        INSERT INTO knowledge_base (section, title, content)
+        VALUES (%s, %s, %s)
+        ON CONFLICT (section, title) DO NOTHING
+        RETURNING id
+    """
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql, (section, title, content))
+            row = cur.fetchone()
+            if row is not None:
+                kb_id = row["id"]
+            else:
+                cur.execute(
+                    """
+                    SELECT id
+                    FROM knowledge_base
+                    WHERE section = %s AND title = %s
+                    """,
+                    (section, title),
+                )
+                kb_id = cur.fetchone()["id"]
+        conn.commit()
+    return kb_id
+
+
+def update_kb_doc(
+    kb_id: int,
+    section: str | None = None,
+    title: str | None = None,
+    content: str | None = None,
+) -> None:
+    """Update provided KB fields and bump updated_at."""
+    assignments: list[str] = []
+    params: list = []
+    if section is not None:
+        assignments.append("section = %s")
+        params.append(section)
+    if title is not None:
+        assignments.append("title = %s")
+        params.append(title)
+    if content is not None:
+        assignments.append("content = %s")
+        params.append(content)
+    if not assignments:
+        return
+    assignments.append("updated_at = NOW()")
+    params.append(kb_id)
+    sql = f"""
+        UPDATE knowledge_base
+        SET {', '.join(assignments)}
+        WHERE id = %s
+    """
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql, params)
+        conn.commit()
+
+
+def delete_kb_doc(kb_id: int) -> None:
+    """Delete a KB row by id."""
+    sql = """
+        DELETE FROM knowledge_base
+        WHERE id = %s
+    """
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql, (kb_id,))
+        conn.commit()
+
+
 def update_kb_entry(kb_id: int, content: str) -> None:
     """Replace a KB entry's content and bump updated_at."""
     sql = """
@@ -261,4 +407,3 @@ def update_kb_entry(kb_id: int, content: str) -> None:
         with conn.cursor() as cur:
             cur.execute(sql, (content, kb_id))
         conn.commit()
-

@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}{% if ticket %}Ticket #{{ ticket.id }}{% else %}Ticket not found{% endif %}{% endblock %}
+{% block content %}
+  {% if not ticket %}
+    <h1>Ticket not found</h1>
+    <p><a href="/">&larr; Back to dashboard</a></p>
+  {% else %}
+    <h1>Ticket #{{ ticket.id }} <small class="status-{{ ticket.status }}">[{{ ticket.status }}]</small></h1>
+
+    <dl>
+      <dt>Customer</dt><dd>{{ ticket.customer_email }}</dd>
+      <dt>Subject</dt><dd>{{ ticket.subject }}</dd>
+      <dt>Section</dt><dd>{{ ticket.section or "—" }}</dd>
+      <dt>Escalated</dt><dd>{{ "yes" if ticket.escalated else "no" }}</dd>
+      {% if ticket.escalation_reason %}
+        <dt>Escalation reason</dt><dd>{{ ticket.escalation_reason }}</dd>
+      {% endif %}
+    </dl>
+
+    <h2>Transcript</h2>
+    {% for m in ticket.messages %}
+      <div class="msg {{ m.direction }}">
+        <div class="meta">{{ m.sender }} · {{ m.created_at }}</div>
+        <pre>{{ m.body }}</pre>
+      </div>
+    {% else %}
+      <p>No messages yet.</p>
+    {% endfor %}
+
+    <h2>Reply as support</h2>
+    <form method="post" action="/tickets/{{ ticket.id }}/reply">
+      <label for="body">Message</label>
+      <textarea id="body" name="body" rows="6" required placeholder="Write your reply…"></textarea>
+      <button type="submit">Send reply</button>
+    </form>
+
+    <h2>Resolve</h2>
+    {% if ticket.status == "resolved" %}
+      <p>This ticket is already resolved.</p>
+    {% else %}
+      <form method="post" action="/tickets/{{ ticket.id }}/resolve">
+        <button type="submit">Mark as resolved</button>
+      </form>
+    {% endif %}
+
+    <p><a href="/">&larr; Back to dashboard</a></p>
+  {% endif %}
+{% endblock %}

@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Knowledge Base{% endblock %}
+{% block content %}
+  <h1>Knowledge Base</h1>
+
+  <h2>New entry</h2>
+  <form method="post" action="/kb">
+    <div class="grid">
+      <label>Section<input name="section" required placeholder="e.g. shipping"></label>
+      <label>Title<input name="title" required placeholder="Short title"></label>
+    </div>
+    <label>Content<textarea name="content" rows="4" required></textarea></label>
+    <button type="submit">Create</button>
+  </form>
+
+  <h2>Entries</h2>
+  {% if docs %}
+    <table role="grid">
+      <thead>
+        <tr>
+          <th>Section</th>
+          <th>Title</th>
+          <th>Preview</th>
+          <th>Updated</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in docs %}
+          <tr>
+            <td>{{ d.section }}</td>
+            <td>{{ d.title }}</td>
+            <td>{{ d.content[:80] }}{% if d.content|length > 80 %}…{% endif %}</td>
+            <td>{{ d.updated_at }}</td>
+            <td>
+              <details>
+                <summary>Edit</summary>
+                <form method="post" action="/kb/{{ d.id }}/update">
+                  <label>Section<input name="section" value="{{ d.section }}" required></label>
+                  <label>Title<input name="title" value="{{ d.title }}" required></label>
+                  <label>Content<textarea name="content" rows="4" required>{{ d.content }}</textarea></label>
+                  <button type="submit">Save</button>
+                </form>
+                <form method="post" action="/kb/{{ d.id }}/delete"
+                      onsubmit="return confirm('Delete this entry?');">
+                  <button type="submit" class="secondary">Delete</button>
+                </form>
+              </details>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No knowledge base entries yet.</p>
+  {% endif %}
+{% endblock %}

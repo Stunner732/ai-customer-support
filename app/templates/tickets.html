@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Tickets{% endblock %}
+{% block content %}
+  <h1>Tickets</h1>
+
+  <div class="summary-cards">
+    <a class="summary-card" href="/"><span class="count">{{ counts.all }}</span>all</a>
+    {% for s in statuses %}
+      <a class="summary-card" href="/?status={{ s }}"><span class="count">{{ counts[s] }}</span>{{ s }}</a>
+    {% endfor %}
+  </div>
+
+  <div class="pill-tabs">
+    <a class="status-pill {% if not selected %}active{% endif %}" href="/">all</a>
+    {% for s in statuses %}
+      <a class="status-pill {% if selected == s %}active{% endif %}" href="/?status={{ s }}">{{ s }}</a>
+    {% endfor %}
+  </div>
+
+  {% if tickets %}
+    <table role="grid">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Subject</th>
+          <th>Customer</th>
+          <th>Section</th>
+          <th>Status</th>
+          <th>Updated</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in tickets %}
+          <tr>
+            <td><a href="/tickets/{{ t.id }}">#{{ t.id }}</a></td>
+            <td>{{ t.subject }}</td>
+            <td>{{ t.customer_email }}</td>
+            <td>{{ t.section or "—" }}</td>
+            <td class="status-{{ t.status }}">{{ t.status }}</td>
+            <td>{{ t.updated_at }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No tickets yet.</p>
+  {% endif %}
+{% endblock %}
