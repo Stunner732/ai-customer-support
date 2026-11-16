@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+credentials.json
+token.json
+dashboard/node_modules/
+dashboard/dist/
+postgres_data/
+
+.kilo/
+.vscode/
