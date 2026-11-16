@@ -5,6 +5,8 @@ reply/resolve actions, and KB CRUD) and runs the Gmail poller loop in a
 background daemon thread for the lifetime of the process.
 """
 
+from datetime import datetime, timezone
+
 import logging
 import threading
 from contextlib import asynccontextmanager
@@ -23,6 +25,26 @@ logger = logging.getLogger(__name__)
 templates = Jinja2Templates(
     directory=str(Path(__file__).resolve().parent / "templates")
 )
+
+
+def format_timestamp(value):
+    """Format a datetime (or ISO string) as 'Nov 16, 14:15 UTC'."""
+    if value is None:
+        return "—"
+    if isinstance(value, str):
+        try:
+            value = datetime.fromisoformat(value)
+        except ValueError:
+            return value
+    if isinstance(value, datetime):
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        value = value.astimezone(timezone.utc)
+        return value.strftime("%b %d, %H:%M UTC")
+    return str(value)
+
+
+templates.env.filters["timestamp"] = format_timestamp
 
 STATUSES = ["escalated", "open", "answered", "resolved"]
 
@@ -116,10 +138,15 @@ def ticket_resolve(ticket_id: int):
 
 
 @app.get("/kb")
-def kb_index(request: Request):
-    """Knowledge base listing."""
+def kb_index(request: Request, section: str | None = None):
+    """Knowledge base listing with optional section filter."""
+    docs = db.list_all_kb()
+    if section:
+        docs = [d for d in docs if d["section"] == section]
     return templates.TemplateResponse(
-        request, "kb.html", {"docs": db.list_all_kb()}
+        request,
+        "kb.html",
+        {"docs": docs, "sections": db.list_sections(), "selected_section": section},
     )
 
 

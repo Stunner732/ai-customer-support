@@ -1,48 +1,61 @@
 {% extends "base.html" %}
-{% block title %}Tickets{% endblock %}
+{% block title %}Tickets &middot; Harbor &amp; Pine{% endblock %}
 {% block content %}
-  <h1>Tickets</h1>
+  <div class="flex items-center gap-2 space-y">
+    <h1 class="page-title">Tickets</h1>
+    <span class="muted text-sm">{{ tickets|length }} ticket{{ "s" if tickets|length != 1 else "" }}</span>
+  </div>
 
-  <div class="summary-cards">
-    <a class="summary-card" href="/"><span class="count">{{ counts.all }}</span>all</a>
+  <div class="summary-row mb-1">
+    <a class="summary-card {% if not selected %}active{% endif %}" href="/">
+      <span class="top-border top-border-all"></span>
+      <span class="count">{{ counts.all }}</span>
+      <span class="label">All</span>
+    </a>
     {% for s in statuses %}
-      <a class="summary-card" href="/?status={{ s }}"><span class="count">{{ counts[s] }}</span>{{ s }}</a>
+      <a class="summary-card {% if selected == s %}active{% endif %}" href="/?status={{ s }}">
+        <span class="top-border top-border-{{ s }}"></span>
+        <span class="count">{{ counts[s] }}</span>
+        <span class="label">{{ s|title }}</span>
+      </a>
     {% endfor %}
   </div>
 
-  <div class="pill-tabs">
-    <a class="status-pill {% if not selected %}active{% endif %}" href="/">all</a>
+  <div class="pill-tabs mb-1">
+    <a class="status-pill {% if not selected %}active{% endif %}" href="/">All</a>
     {% for s in statuses %}
-      <a class="status-pill {% if selected == s %}active{% endif %}" href="/?status={{ s }}">{{ s }}</a>
+      <a class="status-pill {% if selected == s %}active{% endif %}" href="/?status={{ s }}">{{ s|title }}</a>
     {% endfor %}
   </div>
 
   {% if tickets %}
-    <table role="grid">
+    <table role="grid" class="ticket-table">
       <thead>
         <tr>
-          <th>ID</th>
+          <th style="width: 40px;">#</th>
           <th>Subject</th>
           <th>Customer</th>
           <th>Section</th>
           <th>Status</th>
-          <th>Updated</th>
+          <th style="width: 170px;">Updated</th>
         </tr>
       </thead>
       <tbody>
         {% for t in tickets %}
-          <tr>
-            <td><a href="/tickets/{{ t.id }}">#{{ t.id }}</a></td>
+          <tr class="clickable" onclick="location.href='/tickets/{{ t.id }}'">
+            <td>#{{ t.id }}</td>
             <td>{{ t.subject }}</td>
             <td>{{ t.customer_email }}</td>
-            <td>{{ t.section or "—" }}</td>
-            <td class="status-{{ t.status }}">{{ t.status }}</td>
-            <td>{{ t.updated_at }}</td>
+            <td><span class="section-tag">{{ t.section or "General" }}</span></td>
+            <td><span class="status-pill-inline status-{{ t.status }}">{{ t.status|title }}</span></td>
+            <td class="muted text-sm">{{ t.updated_at|timestamp }}</td>
           </tr>
         {% endfor %}
       </tbody>
     </table>
   {% else %}
-    <p>No tickets yet.</p>
+    <div class="card card-body text-center">
+      <p class="muted">No tickets yet.</p>
+    </div>
   {% endif %}
 {% endblock %}

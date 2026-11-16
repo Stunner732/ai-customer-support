@@ -1,57 +1,94 @@
 {% extends "base.html" %}
-{% block title %}Knowledge Base{% endblock %}
+{% block title %}Knowledge Base &middot; Harbor &amp; Pine{% endblock %}
 {% block content %}
-  <h1>Knowledge Base</h1>
+  <div class="flex items-center gap-2 space-y">
+    <h1 class="page-title">Knowledge Base</h1>
+    <span class="muted text-sm">{{ docs|length }} entry{{ "s" if docs|length != 1 else "" }}</span>
+  </div>
 
-  <h2>New entry</h2>
-  <form method="post" action="/kb">
-    <div class="grid">
-      <label>Section<input name="section" required placeholder="e.g. shipping"></label>
-      <label>Title<input name="title" required placeholder="Short title"></label>
+  <details class="card mb-1">
+    <summary class="card-summary">
+      <span class="add-badge">+</span> Add Knowledge Base Entry
+    </summary>
+    <div class="card-body">
+      <form method="post" action="/kb" class="space-y">
+        <div class="grid grid-cols-1 gap-2">
+          <div class="field">
+            <label class="form-label">Section</label>
+            <input name="section" required placeholder="e.g. shipping" class="form-input">
+          </div>
+          <div class="field">
+            <label class="form-label">Title</label>
+            <input name="title" required placeholder="Short title" class="form-input">
+          </div>
+          <div class="field">
+            <label class="form-label">Content</label>
+            <textarea name="content" rows="5" required class="form-input"></textarea>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Create entry</button>
+      </form>
     </div>
-    <label>Content<textarea name="content" rows="4" required></textarea></label>
-    <button type="submit">Create</button>
-  </form>
+  </details>
 
-  <h2>Entries</h2>
+  <div class="flex items-center gap-2 space-y mt-1">
+    <h2 class="text-sm mb-0">Entries</h2>
+    <div class="pill-tabs">
+      <a class="status-pill {% if not selected_section %}active{% endif %}" href="/kb">All</a>
+      {% for sec in sections %}
+        <a class="status-pill {% if selected_section == sec %}active{% endif %}" href="/kb?section={{ sec }}">{{ sec }}</a>
+      {% endfor %}
+    </div>
+  </div>
+
   {% if docs %}
-    <table role="grid">
-      <thead>
-        <tr>
-          <th>Section</th>
-          <th>Title</th>
-          <th>Preview</th>
-          <th>Updated</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for d in docs %}
-          <tr>
-            <td>{{ d.section }}</td>
-            <td>{{ d.title }}</td>
-            <td>{{ d.content[:80] }}{% if d.content|length > 80 %}…{% endif %}</td>
-            <td>{{ d.updated_at }}</td>
-            <td>
-              <details>
-                <summary>Edit</summary>
-                <form method="post" action="/kb/{{ d.id }}/update">
-                  <label>Section<input name="section" value="{{ d.section }}" required></label>
-                  <label>Title<input name="title" value="{{ d.title }}" required></label>
-                  <label>Content<textarea name="content" rows="4" required>{{ d.content }}</textarea></label>
-                  <button type="submit">Save</button>
-                </form>
-                <form method="post" action="/kb/{{ d.id }}/delete"
-                      onsubmit="return confirm('Delete this entry?');">
-                  <button type="submit" class="secondary">Delete</button>
-                </form>
-              </details>
-            </td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    <div class="space-y">
+      {% for d in docs %}
+        <div class="card mb-0-5">
+          <div class="card-body">
+            <div class="flex items-start justify-between gap-1 mb-0-5">
+              <div>
+                <h3 class="text-sm fw-bold">{{ d.title }}</h3>
+                <p class="muted text-xs mb-0-5">{{ d.section }}</p>
+                <p class="muted text-sm mb-0-5">{{ d.content[:120] }}{% if d.content|length > 120 %}&hellip;{% endif %}</p>
+                <span class="muted text-xs">{{ d.updated_at|timestamp }}</span>
+              </div>
+              <div class="flex items-end gap-2">
+                <details>
+                  <summary class="btn btn-sm">Edit</summary>
+                  <form method="post" action="/kb/{{ d.id }}/update" class="space-y mt-0-5">
+                    <div class="grid grid-cols-2 gap-2">
+                      <div class="field">
+                        <label class="form-label">Section</label>
+                        <input name="section" value="{{ d.section }}" required class="form-input">
+                      </div>
+                      <div class="field">
+                        <label class="form-label">Title</label>
+                        <input name="title" value="{{ d.title }}" required class="form-input">
+                      </div>
+                    </div>
+                    <div class="field">
+                      <label class="form-label">Content</label>
+                      <textarea name="content" rows="4" required class="form-input">{{ d.content }}</textarea>
+                    </div>
+                    <div class="flex items-end gap-2">
+                      <button type="submit" class="btn btn-primary btn-sm">Save</button>
+                      <a href="/kb" class="btn btn-sm">Cancel</a>
+                    </div>
+                  </form>
+                  <form method="post" action="/kb/{{ d.id }}/delete" onsubmit="return confirm('Delete this entry?');" class="mt-0-5">
+                    <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                  </form>
+                </details>
+              </div>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
   {% else %}
-    <p>No knowledge base entries yet.</p>
+    <div class="card card-body text-center">
+      <p class="muted">No knowledge base entries yet.</p>
+    </div>
   {% endif %}
 {% endblock %}
